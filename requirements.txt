@@ -1,0 +1,21 @@
+# General
+Flask==2.3.2  # Web framework for creating APIs
+Flask-Cors==3.0.10  # CORS support for Flask applications
+requests==2.31.0  # For making HTTP requests to APIs
+pandas==2.0.3  # For data manipulation and analysis
+numpy==1.25.0  # For numerical operations
+
+# Geospatial Libraries
+GeoPandas==0.13.0  # For geospatial data manipulation
+shapely==2.0.1  # For geometric operations
+fiona==1.9.0  # For reading and writing vector data
+pyproj==3.5.0  # For cartographic projections and coordinate transformations
+
+# Data Processing and ETL
+apache-beam[gcp]==2.48.0  # For data processing, supporting GCP
+google-cloud-storage==2.7.0  # For interacting with GCS
+google-cloud-bigquery==3.6.0  # For BigQuery interactions
+
+# Machine Learning and Analysis
+scikit-learn==1.3.0  # For machine learning algorithms
+tensorflow==2.12.0  # For any deep learning tasks
