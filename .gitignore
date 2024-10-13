@@ -1,0 +1,59 @@
+# Python bytecode
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual environment
+venv/
+env/
+.venv/
+
+# Dependency directories
+pip-log.txt
+pip-wheel-metadata/
+*.egg-info/
+dist/
+build/
+
+# Configuration files
+*.env
+*.local
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Docker files
+**/*.dockerignore
+
+# Log files
+*.log
+
+# Coverage files
+.coverage
+coverage.xml
+*.cover
+
+# Caches
+.cache/
+*.pdb
+*.pdbx
+
+# GCP credentials
+*.json
+
+# IDE/Editor specific files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# MacOS specific files
+.DS_Store
+
+# Operating System specific files
+Thumbs.db
+ehthumbs.db
+
+# Temporary files
+tmp/
+temp/
