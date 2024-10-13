@@ -1,0 +1,35 @@
+steps:
+  # Step 1: Build the Docker image
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'gcr.io/$PROJECT_ID/geotech-api', '.']
+    id: Build-Docker-Image
+
+  # Step 2: Push the Docker image to Google Container Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/geotech-api']
+    id: Push-Docker-Image
+
+  # Step 3: Deploy the image to Google Cloud Run
+  - name: 'gcr.io/cloud-builders/gcloud'
+    args:
+      [
+        'run', 'deploy', 'geotech-api-service',   # Service name
+        '--image', 'gcr.io/$PROJECT_ID/geotech-api',  # Docker image
+        '--platform', 'managed',
+        '--region', 'us-central1',  # Set your preferred region
+        '--allow-unauthenticated',  # Allow unauthenticated access, remove if not needed
+        '--port', '8080'  # Set the port Flask is running on
+      ]
+    id: Deploy-to-Cloud-Run
+
+# Optionally, you can set some substitution variables
+substitutions:
+  _SERVICE_NAME: "geotech-api-service"  # Customize service name if required
+
+# Specify service account if you need to
+# options:
+#   substitution_option: ALLOW_LOOSE
+
+# Specify GCP Cloud Build timeout (default is 10 minutes)
+timeout: "1200s"
+
