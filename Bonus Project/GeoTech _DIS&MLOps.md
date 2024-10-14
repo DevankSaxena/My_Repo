@@ -62,21 +62,21 @@ To create a training job using the AI Platform, you can train a TensorFlow model
      script_path='path/to/your/training_script.py',
      requirements=['google-cloud-bigquery', 'tensorflow'],
   )
+```
 
-
-## Run the training job
+### Run the training job
 model = job.run(sync=True, args=['--data_path=gs://your-bucket/training_data.csv'])
 
-# Evaluate the Model
+### Evaluate the Model
 After training, evaluate the model's performance using a separate validation dataset. Store evaluation metrics in BigQuery for analysis.
 
-# Deploy the Model
+### Deploy the Model
 Deploy the trained model to the AI Platform for serving predictions.
 
-# Setup Monitoring and Logging
+### Setup Monitoring and Logging
 Configure Cloud Monitoring to track model performance and set up alerts for any anomalies detected during predictions.
 
-# Create an API for Predictions
+### Create an API for Predictions
 Use Cloud Functions or Cloud Run to create a REST API that interacts with the deployed model for predictions.
 
 ## Conclusion
