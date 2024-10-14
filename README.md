@@ -59,22 +59,25 @@ The full design document includes:
   The architecture includes components such as data sources, processing pipelines (ETL/ELT), data storage, analysis modules, and API services.
 
 - **Data Flow:**  
-  Data flows from sources like GeoJSON files and databases into the ETL/ELT pipeline, where it is processed, stored in GCP services (like BigQuery/Cloud Storage), and made available for analysis and API consumption.
+  Data flows from sources like GeoJSON files and databases into the ETL/ELT pipeline, where it is processed, stored in GCP services (like BigQuery/Cloud Storage), and made available for analysis and API consumption. Real time data comimg from api's can also be handled and ingested by streaming pipelines using Dataflow.
 
 - **Data Modeling:**  
   Data is structured in a schema optimized for geospatial analysis, leveraging BigQuery's spatial extensions for querying.
 
 - **Technology Choices:**  
-  GCP tools used: Cloud Storage, BigQuery, Dataproc, Dataflow, Cloud Functions, API Gateway.
+  GCP tools used: Cloud Storage, BigQuery, Dataproc, Dataflow, DataPlex, Cloud Functions, API Gateway.
 
 - **Security and Privacy:**  
   IAM policies, encryption, and GCP’s security best practices are implemented for data security.
+  Data Catalog and DataPlex can also be used for tagging of sensitive and important data for privacy and better visuality for 
+downstream.
 
 - **Scalability and Reliability:**  
   The system is designed to scale with growing data volumes and is resilient with high availability through GCP services.
 
 - **Deployment and Maintenance:**  
   GCP CI/CD tools and monitoring services (Stackdriver) are used for seamless deployment, logging, and alerting.
+  Everything can be taken care in GCP , but we can also use Jenkins configured with Github and Spinnaker for running and deployment of docker images.
 
 ---
 
@@ -85,6 +88,7 @@ The full design document includes:
 - **Data Storage:** BigQuery, Cloud Storage
 - **APIs:** Cloud Endpoints, API Gateway
 - **Monitoring:** Stackdriver, Cloud Logging
+- **Visualization and Data Analysis:** Looker Studio, Bigquery GeoViz, BI Tools ( Tableau, Power BI)
 
 ---
 
@@ -119,10 +123,10 @@ The API is deployed using GCP API Gateway and Cloud Functions for serverless arc
 ## Bonus Tasks
 
 1. **Integration with MLOps:**  
-   Demonstration of how the system integrates with MLOps on GCP, such as using AI Platform for model training on geospatial data.
+   Demonstration of how the system integrates with MLOps on GCP, such as using AI Platform for model training on geospatial data. MLOps Integration with GeoTech Data Intelligence System is added in this repository in Bonus Directory.
 
 2. **Real-world Dataset:**  
-   Optional use of real-world datasets in addition to the provided `states.geojson` file, showcasing insights through analysis.
+   Global Landslide Data Analysis Project is Added in Bonus repository with geospatial data and result captues of Bigquery GeoViz.
 
 ---
 
