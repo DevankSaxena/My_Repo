@@ -62,7 +62,7 @@ job = aiplatform.CustomTrainingJob(
     display_name='geospatial-model-training',
     script_path='path/to/your/training_script.py',
     requirements=['google-cloud-bigquery', 'tensorflow'],
-)
+)```
 
 # Run the training job
 model = job.run(sync=True, args=['--data_path=gs://your-bucket/training_data.csv'])
