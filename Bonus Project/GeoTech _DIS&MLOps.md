@@ -50,21 +50,21 @@ The integration can be achieved through various GCP services and workflows that 
 
 To create a training job using the AI Platform, you can train a TensorFlow model using the following Python script:
 
-```python
-from google.cloud import aiplatform
+ ```python
+ from google.cloud import aiplatform
 
-# Initialize the AI Platform
-aiplatform.init(project='your-project-id', location='us-central1')
+ # Initialize the AI Platform
+ aiplatform.init(project='your-project-id', location='us-central1')
 
-# Define the model training job
-job = aiplatform.CustomTrainingJob(
-    display_name='geospatial-model-training',
-    script_path='path/to/your/training_script.py',
-    requirements=['google-cloud-bigquery', 'tensorflow'],
-)
+ # Define the model training job
+ job = aiplatform.CustomTrainingJob(
+     display_name='geospatial-model-training',
+     script_path='path/to/your/training_script.py',
+     requirements=['google-cloud-bigquery', 'tensorflow'],
+  )
 
 
-# Run the training job
+## Run the training job
 model = job.run(sync=True, args=['--data_path=gs://your-bucket/training_data.csv'])
 
 # Evaluate the Model
