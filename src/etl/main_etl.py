@@ -1,114 +1,110 @@
 import apache_beam as beam
 from apache_beam.options.pipeline_options import PipelineOptions
-from google.cloud import storage, bigquery
-import json
 import requests
-from datetime import datetime
+import json
+from shapely.geometry import shape
+from shapely.wkt import dumps as wkt_dumps
+from google.cloud import bigquery
 
-# Define global variables
-GCP_PROJECT = "your-gcp-project-id"
-BUCKET_NAME = "your-cloud-storage-bucket"
-GEOJSON_FILE_PATH = "gs://your-cloud-storage-bucket/states.geojson"
-BIGQUERY_DATASET = "geotech_dataset"
-BIGQUERY_TABLE = "geospatial_data"
+class FetchGeoJsonFromAPI(beam.DoFn):
+    def process(self, api_url):
+        """
+        Fetch geospatial data from API and return as a dictionary
+        """
+        response = requests.get(api_url)
+        if response.status_code == 200:
+            return [response.json()]  # Output the GeoJSON
+        else:
+            raise Exception(f"Failed to fetch data from {api_url}: {response.status_code}")
 
-# BigQuery schema
-BIGQUERY_SCHEMA = [
-    {"name": "state_name", "type": "STRING", "mode": "REQUIRED"},
-    {"name": "polygon_coords", "type": "GEOGRAPHY", "mode": "REQUIRED"},
-    {"name": "population", "type": "INT64", "mode": "NULLABLE"},
-    {"name": "area", "type": "FLOAT", "mode": "NULLABLE"},
-]
+class TransformGeoJsonToBigQuery(beam.DoFn):
+    def process(self, geojson_data):
+        """
+        Transform GeoJSON data into a format suitable for BigQuery.
+        Extract geometries and convert to WKT format.
+        """
+        for feature in geojson_data['features']:
+            properties = feature['properties']
+            geometry = feature['geometry']
 
-def fetch_geojson_from_storage():
-    """
-    Fetch GeoJSON data from Google Cloud Storage.
-    """
-    client = storage.Client()
-    bucket = client.bucket(BUCKET_NAME)
-    blob = bucket.blob(GEOJSON_FILE_PATH.split("/")[-1])
-    
-    # Download and return the GeoJSON content
-    geojson_content = blob.download_as_string()
-    return json.loads(geojson_content)
+            # Convert the geometry to WKT format
+            geom_wkt = wkt_dumps(shape(geometry))
 
+            # Create output dictionary with WKT and properties
+            yield {
+                'geometry': geom_wkt,
+                **properties  # Add other properties to the output
+            }
 
-def fetch_population_data(api_url):
-    """
-    Fetch population data from an external API.
-    """
-    response = requests.get(api_url)
-    if response.status_code == 200:
-        return response.json()
-    else:
-        raise Exception(f"Failed to fetch data from API: {api_url}")
-
-
-def process_geojson(geojson_data, population_data):
-    """
-    Process GeoJSON data, enrich with population data and prepare for BigQuery ingestion.
-    """
-    processed_data = []
-    
-    for feature in geojson_data['features']:
-        state_name = feature['properties']['name']
-        polygon_coords = json.dumps(feature['geometry'])
-        area = feature['properties'].get('area', None)
-        population = population_data.get(state_name, None)
-
-        processed_data.append({
-            'state_name': state_name,
-            'polygon_coords': f"POLYGON(({polygon_coords}))",
-            'population': population,
-            'area': area
-        })
-    
-    return processed_data
-
-
-class WriteToBigQuery(beam.DoFn):
-    def __init__(self, project, dataset, table, schema):
-        super().__init__()
-        self.project = project
+class LoadToBigQuery(beam.PTransform):
+    def __init__(self, dataset, table):
         self.dataset = dataset
         self.table = table
-        self.schema = schema
 
-    def start_bundle(self):
-        self.client = bigquery.Client(project=self.project)
-
-    def process(self, element):
-        table_ref = self.client.dataset(self.dataset).table(self.table)
-        errors = self.client.insert_rows_json(table_ref, [element])
-        
-        if errors:
-            raise Exception(f"BigQuery insert errors: {errors}")
-
-
-def run_pipeline():
-    """
-    Apache Beam pipeline for the ETL process.
-    """
-    # Fetch data from external sources
-    geojson_data = fetch_geojson_from_storage()
-    population_data = fetch_population_data("https://api.example.com/population_data")
-
-    # Beam pipeline options
-    pipeline_options = PipelineOptions(
-        project=GCP_PROJECT,
-        temp_location=f"gs://{BUCKET_NAME}/temp",
-        region="your-gcp-region",
-        runner="DataflowRunner"  # You can also use DirectRunner for local execution
-    )
-
-    with beam.Pipeline(options=pipeline_options) as p:
-        # Create pipeline
-        (
-            p
-            | 'Start' >> beam.Create([geojson_data])
-            | 'Process GeoJSON' >> beam.FlatMap(lambda geojson: process_geojson(geojson, population_data))
-            | 'Write to BigQuery' >> beam.ParDo(WriteToBigQuery(GCP_PROJECT, BIGQUERY_DATASET, BIGQUERY_TABLE, BIGQUERY_SCHEMA))
+    def expand(self, pcoll):
+        return (
+                pcoll
+                | 'WriteToBigQuery' >> beam.io.WriteToBigQuery(
+            f'{self.dataset}.{self.table}',
+            schema=self.table_schema(),
+            write_disposition=beam.io.BigQueryDisposition.WRITE_APPEND
+        )
         )
 
-if __name__ == "__main__":
-    run_pipeline()
+    def table_schema(self):
+        """Define the BigQuery table schema."""
+        return {
+            'fields': [
+                {'name': 'geometry', 'type': 'GEOGRAPHY'},
+                {'name': 'NAME', 'type': 'STRING'},
+                {'name': 'STATEFP', 'type': 'STRING'},
+                {'name': 'STUSPS', 'type': 'STRING'}# Example attribute
+                # Add other fields based on the properties in the GeoJSON
+            ]
+        }
+
+def run(api_url, geojson_file, dataset, table, project, region, temp_location):
+    """
+    Run the Apache Beam pipeline for transforming and loading geospatial data into BigQuery.
+    """
+    options = PipelineOptions(
+        runner='DataflowRunner',
+        project=project,
+        region=region,
+        temp_location=temp_location,
+        save_main_session=True
+    )
+
+    with beam.Pipeline(options=options) as pipeline:
+        # Read GeoJSON from a file (local or GCS)
+        geojson_from_file = (
+                pipeline
+                | 'ReadGeoJSONFile' >> beam.io.ReadFromText(geojson_file)
+                | 'ParseGeoJSONFile' >> beam.Map(json.loads)
+                | 'TransformGeoJsonFile' >> beam.ParDo(TransformGeoJsonToBigQuery())
+        )
+
+        # Fetch GeoJSON from API and transform
+        geojson_from_api = (
+                pipeline
+                | 'CreateAPIUrl' >> beam.Create([api_url])
+                | 'FetchGeoJsonFromAPI' >> beam.ParDo(FetchGeoJsonFromAPI())
+                | 'TransformGeoJsonAPI' >> beam.ParDo(TransformGeoJsonToBigQuery())
+        )
+
+        # Combine the data from both file and API
+        all_geojson_data = (geojson_from_file, geojson_from_api) | beam.Flatten()
+
+        # Write the combined transformed data into BigQuery
+        all_geojson_data | 'LoadDataIntoBigQuery' >> LoadToBigQuery(dataset, table)
+
+if __name__ == '__main__':
+    api_url = 'https://example.com/api/geospatial-data'
+    geojson_file = 'gs://your-bucket/path-to-your-geojson-file.geojson'
+    dataset = 'your_dataset_id'
+    table = 'your_table_id'
+    project = 'your_gcp_project_id'
+    region = 'your_region'
+    temp_location = 'gs://your-bucket/temp'
+
+    run(api_url, geojson_file, dataset, table, project, region, temp_location)
